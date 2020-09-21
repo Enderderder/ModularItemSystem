@@ -10,8 +10,8 @@ UItemAttirbuteFactory::UItemAttirbuteFactory()
 	Formats.Add(FString(TEXT("txt;")) + NSLOCTEXT("UTextAssetFactory", "FormatTxt", "Text File").ToString());
 
 	SupportedClass = UItemAttributeBase::StaticClass();
-	bCreateNew = true;
-	bEditorImport = true;
+	bCreateNew = false;
+	bEditorImport = false;
 }
 
 UObject* UItemAttirbuteFactory::FactoryCreateFile(UClass* InClass, UObject* InParent, FName InName, EObjectFlags Flags, const FString& Filename, const TCHAR* Parms, FFeedbackContext* Warn, bool& bOutOperationCanceled)
