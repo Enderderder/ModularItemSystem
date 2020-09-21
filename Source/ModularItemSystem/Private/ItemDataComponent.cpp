@@ -18,7 +18,7 @@ UItemDataComponent::UItemDataComponent()
 
 }
 
-bool UItemDataComponent::GetCurrentItemData(FItemData& _outItemData) const
+bool UItemDataComponent::GetCurrentItemData(FModularItemData& _outItemData) const
 {
 	_outItemData = UModularItemSubsystem::Get()->GetItemByName(ItemName);
 

@@ -23,7 +23,7 @@ private:
 
 #if WITH_EDITORONLY_DATA
 	UPROPERTY(VisibleAnywhere)
-	FItemData ItemDataPreview;
+	FModularItemData ItemDataPreview;
 #endif // WITH_EDITORONLY_DATA
 
 public:	
@@ -37,7 +37,7 @@ public:
 	 * @return True if the item actually exists
 	 */
 	UFUNCTION(BlueprintPure, Category = "ModularItemComponent")
-	UPARAM(DisplayName = "ItemExist?") bool GetCurrentItemData(FItemData& _outItemData) const;
+	UPARAM(DisplayName = "ItemExist?") bool GetCurrentItemData(FModularItemData& _outItemData) const;
 
 protected:
 	// ~ Begin UActorComponent Interface

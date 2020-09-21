@@ -11,7 +11,7 @@
  * This struct holds the data/information of an item
  */
 USTRUCT(BlueprintType)
-struct FItemData : public FTableRowBase
+struct FModularItemData : public FTableRowBase
 {
 	GENERATED_BODY()
 
@@ -44,7 +44,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TArray<class UItemAttributeBase*> ItemAttributes;
 
-	FItemData() :
+	FModularItemData() :
 		Id(0),
 		Icon(nullptr),
 		ItemName(TEXT("")),
@@ -63,7 +63,7 @@ struct FItemListViewData
 	uint32 RowNum;
 
 	/** Struct data of the item */
-	FItemData ItemData;
+	FModularItemData ItemData;
 };
 
 

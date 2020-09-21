@@ -17,21 +17,11 @@ DEFINE_LOG_CATEGORY(LogModularItemSystem);
 /** This path is build-in for the plugin, no change should needed */
 #define ITEM_DATA_TABLE_PATH TEXT("DataTable'/ModularItemSystem/DT_ItemDatas.DT_ItemDatas'")
 
+//----------------------------------------------------------------------//
+// UModularItemSubsystem
+//----------------------------------------------------------------------//
 UModularItemSubsystem::UModularItemSubsystem() : UEngineSubsystem()
 {
-	// Locate the data table in the content folder
-	static ConstructorHelpers::FObjectFinder<UDataTable> itemDataTableObject(ITEM_DATA_TABLE_PATH);
-	if (itemDataTableObject.Succeeded())
-	{
-		ItemDataTable = itemDataTableObject.Object;
-	}
-	else
-	{
-		
-
-		UE_LOG(LogModularItemSystem, Error,
-			TEXT("Cannot locate itemDataTableObject, check plugin integrity"));
-	}
 }
 
 UModularItemSubsystem* UModularItemSubsystem::Get()
@@ -40,9 +30,22 @@ UModularItemSubsystem* UModularItemSubsystem::Get()
 	return GEngine->GetEngineSubsystem<UModularItemSubsystem>();
 }
 
+bool UModularItemSubsystem::IsTableUsingModularItemData(UDataTable* _table)
+{
+	if (!_table) return false;
+
+	return (_table->GetRowStruct() == FModularItemData::StaticStruct()) ? true : false;
+}
+
 void UModularItemSubsystem::Initialize(FSubsystemCollectionBase& _collection)
 {
 	Super::Initialize(_collection);
+
+	// Try to load the data table from setting
+	auto tableObject = GetSettings()->ConfigDataTablePath.ResolveObject();
+	if (!tableObject)
+		tableObject = GetSettings()->ConfigDataTablePath.TryLoad();
+	ItemDataTable = Cast<UDataTable>(tableObject);
 
 	FAssetRegistryModule& assetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(FName("AssetRegistry"));
 	IAssetRegistry& assetRegistry = assetRegistryModule.Get();
@@ -51,8 +54,6 @@ void UModularItemSubsystem::Initialize(FSubsystemCollectionBase& _collection)
 		assetRegistry.OnFilesLoaded().AddUObject(this, &UModularItemSubsystem::OnAssetFilesLoaded);
 	}
 	else OnAssetFilesLoaded();
-
-	LoadItemData();
 }
 
 void UModularItemSubsystem::OnAssetFilesLoaded()
@@ -79,28 +80,12 @@ void UModularItemSubsystem::OnAssetFilesLoaded()
 // 	}
 }
 
-#if WITH_EDITOR
-
-// TODO: Potential editor code?
-
-#endif WITH_EDITOR
-
-// TODO: use data table straight instead
-void UModularItemSubsystem::LoadItemData()
-{
-	if (LoadedItemDataArray.Num() != 0) return;
-
-	// Loads the data table into an array
-	TArray<FItemData*> outputDataArray;
-	ItemDataTable->GetAllRows<FItemData>(TEXT("ModularItemSystem"), outputDataArray);
-}
-
-TArray<UItemAttributeBase*> UModularItemSubsystem::GetItemAttributes(FName _itemName) const
+TArray<UItemAttributeBase*> UModularItemSubsystem::GetItemAttributes(const FName& _itemName) const
 {
 	TArray<UItemAttributeBase*> outputData;
 	if (ItemDataTable)
 	{
-		FItemData* itemData = ItemDataTable->FindRow<FItemData>(_itemName, WarningContext);
+		FModularItemData* itemData = ItemDataTable->FindRow<FModularItemData>(_itemName, WarningContext);
 		if (itemData)
 		{
 			for (const auto itemAttr : itemData->ItemAttributes)
@@ -113,15 +98,15 @@ TArray<UItemAttributeBase*> UModularItemSubsystem::GetItemAttributes(FName _item
 	return outputData;
 }
 
-const TArray<FItemData> UModularItemSubsystem::FindItemsContainAttribute(TSubclassOf<class UItemAttributeBase> _attributeClass) const
+const TArray<FModularItemData> UModularItemSubsystem::FindItemsContainAttribute(TSubclassOf<UItemAttributeBase> _attributeClass) const
 {
-	TArray<FItemData> outputData;
+	TArray<FModularItemData> outputData;
 	if (ItemDataTable)
 	{
-		TArray<FItemData*> itemDatas;
+		TArray<FModularItemData*> itemDatas;
 		ItemDataTable->GetAllRows(WarningContext, itemDatas);
 
-		for (FItemData* item : itemDatas)
+		for (FModularItemData* item : itemDatas)
 		{
 			if (item->ItemAttributeTypes.Contains(_attributeClass))
 			{
@@ -133,14 +118,22 @@ const TArray<FItemData> UModularItemSubsystem::FindItemsContainAttribute(TSubcla
 	return outputData;
 }
 
-FItemData UModularItemSubsystem::GetItemByName(const FName& _itemName) const
+FModularItemData UModularItemSubsystem::GetItemByName(const FName& _itemName) const
 {
 	if (ItemDataTable)
 	{
-		FItemData* itemData = ItemDataTable->FindRow<FItemData>(_itemName, WarningContext);
-		return itemData ? *itemData : FItemData();
+		FModularItemData* itemData = ItemDataTable->FindRow<FModularItemData>(_itemName, WarningContext);
+		return itemData ? *itemData : FModularItemData();
 	}
 
-	// returns an empty struct
-	return FItemData();
+	// returns an empty struct if not found
+	return FModularItemData();
+}
+
+void UModularItemSubsystem::ChangeDataTable(UDataTable* _newDataTable)
+{
+	if (IsTableUsingModularItemData(_newDataTable))
+	{
+		ItemDataTable = _newDataTable;
+	}
 }

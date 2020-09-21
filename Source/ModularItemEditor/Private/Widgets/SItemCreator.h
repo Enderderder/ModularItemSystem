@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Widgets/SCompoundWidget.h"
 
+#include "Misc/NotifyHook.h"
 #include "Kismet2/StructureEditorUtils.h"
 #include "DataTableEditorUtils.h"
 
@@ -19,6 +20,7 @@ DECLARE_DELEGATE_OneParam(FOnItemHighlighted, FName /*Item name*/);
  * A widget for item creation
  */
 class SItemCreator : public SCompoundWidget
+	, public FNotifyHook
 	, public FStructureEditorUtils::INotifyOnStructChanged
 	, public FDataTableEditorUtils::INotifyOnDataTableChanged
 {
@@ -105,6 +107,11 @@ protected:
 	/**
 	 * 
 	 */
+	void OnMiSettingsChanged(const FPropertyChangedEvent& _event);
+
+	/**
+	 * 
+	 */
 	void CacheItemDataTableForEdit(UDataTable* _dataTable, TArray<FItemDataListViewPtr>& _outListViewPtrArray);
 
 	/**
@@ -166,9 +173,6 @@ protected:
 #pragma region Button Binding
 
 private:
-
-	TSharedPtr<class SButton> RefreshItemListButton;
-	FReply OnRefreshItemListButtonClicked();
 
 	TSharedPtr<class SButton> AddItemButton;
 	FReply OnAddItemButtonClicked();

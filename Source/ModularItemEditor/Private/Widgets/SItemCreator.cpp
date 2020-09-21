@@ -24,7 +24,7 @@
 
 #include "PropertyEditorModule.h"
 #include "IStructureDetailsView.h"
-#include "IDetailsView.h"
+#include "ISinglePropertyView.h"
 
 #define LOCTEXT_NAMESPACE "SItemCreator"
 
@@ -82,97 +82,70 @@ void SItemCreator::Construct(const FArguments& _inArgs)
 	TSharedRef<SVerticalBox> ItemListViewContent = CreateItemListViewContentBox();
 	CreateItemDetailEditor();
 	
+	FPropertyEditorModule& propertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
+
+	FDetailsViewArgs viewArgs;
+	viewArgs.bAllowSearch = false;
+	viewArgs.bHideSelectionTip = false;
+	viewArgs.bShowScrollBar = false;
+	viewArgs.bShowActorLabel = false;
+	viewArgs.NotifyHook = this;
+
+	auto miSystem = UModularItemSubsystem::Get();
+	auto miSettingView = propertyModule.CreateDetailView(viewArgs);
+	miSettingView->SetObject(miSystem->GetSettings());
+	miSettingView->OnFinishedChangingProperties().AddSP(this, &SItemCreator::OnMiSettingsChanged);
+
 	ChildSlot
 	[
 		SNew(SConstraintCanvas)
 		+ SConstraintCanvas::Slot().Anchors(FAnchors(0.0f, 0.0f, 1.0f, 1.0f))
 		[
-			SNew(SVerticalBox)
-			+ SVerticalBox::Slot().AutoHeight()
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot().AutoWidth()
 			[
-				SNew(SSpacer).Size(FVector2D(0.0f, 10.0f))
-			]
-			+ SVerticalBox::Slot().AutoHeight()
-			[
-				SNew(SHorizontalBox)
-				+ SHorizontalBox::Slot().AutoWidth()
+				SNew(SVerticalBox)
+				+ SVerticalBox::Slot() .AutoHeight()
 				[
-					SNew(SBox).MinDesiredWidth(400.0f).MaxDesiredWidth(600.0f)
+					miSettingView
+				]
+				+ SVerticalBox::Slot()
+				[
+					SNew(SBox).MinDesiredWidth(600.0f).MaxDesiredWidth(800.0f)
+					[
+						SNew(SBorder)
+						[
+							ItemListViewContent
+						]
+					]
+				]
+				// Add New Item Button
+				+ SVerticalBox::Slot().AutoHeight()
+				[
+					SAssignNew(AddItemButton, SButton)
+					.OnClicked(this, &SItemCreator::OnAddItemButtonClicked)
 					[
 						SNew(STextBlock)
-						.Text(STRING_TEXT("Items"))
+						.Text(STRING_TEXT("Add Item"))
 						.Justification(ETextJustify::Center)
 					]
 				]
-				+ SHorizontalBox::Slot()
-				.HAlign(HAlign_Center)
-				[
-					SNew(STextBlock)
-					.Text(STRING_TEXT("Preview & Edit"))
-					.Justification(ETextJustify::Center)
-				]
 			]
-			+ SVerticalBox::Slot()
+			+ SHorizontalBox::Slot()
 			[
-				SNew(SHorizontalBox)
-				+ SHorizontalBox::Slot().AutoWidth()
+				SNew(SScrollBox)
+				+ SScrollBox::Slot()
 				[
-					SNew(SVerticalBox)
-					+ SVerticalBox::Slot().AutoHeight()
-					[
-						SNew(SHorizontalBox)
-
-						// Refresh Item List Button
-						+ SHorizontalBox::Slot()
-						[
-							SAssignNew(RefreshItemListButton, SButton)
-							.OnClicked(this, &SItemCreator::OnRefreshItemListButtonClicked)
-							[
-								SNew(STextBlock)
-								.Text(STRING_TEXT("Refresh"))
-								.Justification(ETextJustify::Center)
-							]
-						]
-
-						// Add New Item Button
-						+ SHorizontalBox::Slot()
-						[
-							SAssignNew(AddItemButton, SButton)
-							.OnClicked(this, &SItemCreator::OnAddItemButtonClicked)
-							[
-								SNew(STextBlock)
-								.Text(STRING_TEXT("Add Item"))
-								.Justification(ETextJustify::Center)
-							]
-						]
-					]
-					+ SVerticalBox::Slot()
-					[
-						SNew(SBox).MinDesiredWidth(400.0f).MaxDesiredWidth(600.0f)
-						[
-							SNew(SBorder)
-							[
-								ItemListViewContent
-							]
-						]
-					]
+					ItemDetailEditor.ToSharedRef()
 				]
-				+ SHorizontalBox::Slot()
+				+ SScrollBox::Slot()
 				[
-					SNew(SScrollBox)
-					+ SScrollBox::Slot()
+					SAssignNew(DeleteItemButton, SButton)
+					.OnClicked(this, &SItemCreator::OnDeleteItemButtonClicked)
 					[
-						ItemDetailEditor.ToSharedRef()
-					]
-					+ SScrollBox::Slot()
-					[
-						SAssignNew(DeleteItemButton, SButton)
-						.OnClicked(this, &SItemCreator::OnDeleteItemButtonClicked)
-						[
-							SNew(STextBlock)
-							.Text(STRING_TEXT("Delete"))
-							.Justification(ETextJustify::Center)
-						]
+						SNew(STextBlock)
+						.Text(STRING_TEXT("Delete"))
+						.Justification(ETextJustify::Center)
 					]
 				]
 			]
@@ -273,6 +246,41 @@ UDataTable* SItemCreator::GetEditableDataTable() const
 	return UModularItemSubsystem::Get()->GetItemDataTable();
 }
 
+void SItemCreator::OnMiSettingsChanged(const FPropertyChangedEvent& _event)
+{
+	const auto currentDataTable = GetEditableDataTable();
+	auto miSystem = UModularItemSubsystem::Get();
+
+	bool bNeedToRevertChange = false;
+
+	auto newItemTableObject = miSystem->GetSettings()->ConfigDataTablePath.ResolveObject();
+	auto newItemTable = Cast<UDataTable>(newItemTableObject);
+	if (!newItemTable ||
+		!UModularItemSubsystem::IsTableUsingModularItemData(newItemTable))
+	{
+		bNeedToRevertChange = true;
+
+		// The item data table is invalid
+		// Popup an error dialog here
+		const FText Message = LOCTEXT(
+			"Invalid Item Data Table",
+			"Cannot use this asset as an editable item data table, make sure the row struct of the table is FModularItemData");
+		FMessageDialog::Open(EAppMsgType::Ok, Message);
+	}
+
+	if (bNeedToRevertChange)
+	{
+		miSystem->GetSettings()->ConfigDataTablePath.SetPath(currentDataTable->GetPathName());
+	}
+	else
+	{
+		miSystem->GetSettings()->SaveConfig();
+		miSystem->ChangeDataTable(newItemTable);
+		ItemDetailEditor->ChangeDataTable(newItemTable);
+		FDataTableEditorUtils::BroadcastPostChange(newItemTable, FDataTableEditorUtils::EDataTableChangeInfo::RowList);
+	}
+}
+
 void SItemCreator::CacheItemDataTableForEdit(UDataTable* _dataTable, TArray<FItemDataListViewPtr>& _outListViewPtrArray)
 {
 	if (!_dataTable || !_dataTable->RowStruct)
@@ -302,7 +310,7 @@ void SItemCreator::CacheItemDataTableForEdit(UDataTable* _dataTable, TArray<FIte
 		}
 
 		// Always refresh the item data value
-		cachedRowData->ItemData = *(reinterpret_cast<FItemData*>(rowIt->Value));
+		cachedRowData->ItemData = *(reinterpret_cast<FModularItemData*>(rowIt->Value));
 
 		_outListViewPtrArray.Add(cachedRowData);
 	}
@@ -462,7 +470,7 @@ void SItemCreator::CreateNewItem()
 		{
 			FDataTableEditorUtils::SelectRow(dataTable, newItemName);
 
-			FItemData* newItem = (FItemData*)newRow;
+			FModularItemData* newItem = (FModularItemData*)newRow;
 			newItem->ItemName = newItemName;
 		}
 	}
@@ -495,12 +503,6 @@ void SItemCreator::RemoveSelectedItem()
 			}
 		}
 	}
-}
-
-FReply SItemCreator::OnRefreshItemListButtonClicked()
-{
-	RefreshCachedItemDataTable();
-	return FReply::Handled();
 }
 
 FReply SItemCreator::OnAddItemButtonClicked()

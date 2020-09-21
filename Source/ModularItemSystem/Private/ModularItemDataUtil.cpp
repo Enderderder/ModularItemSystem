@@ -12,7 +12,7 @@ TArray<UItemAttributeBase*> FModularItemDataUtil::GetItemAttributes(UDataTable* 
 {
 	TArray<UItemAttributeBase*> outputArray;
 
-	FItemData* itemData = _dataTable->FindRow<FItemData>(_itemName, WARNING_CONTEXT);
+	FModularItemData* itemData = _dataTable->FindRow<FModularItemData>(_itemName, WARNING_CONTEXT);
 	if (itemData)
 	{
 		for (const auto itemAttr : itemData->ItemAttributes)

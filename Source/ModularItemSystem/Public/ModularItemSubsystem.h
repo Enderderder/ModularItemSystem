@@ -9,12 +9,26 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogModularItemSystem, Log, All);
 
+class UDataTable;
 class UItemAttributeBase;
+
+/**
+ * Setting object for the modular item system
+ */
+UCLASS(config = ModularItemSystem, defaultconfig)
+class MODULARITEMSYSTEM_API UModularItemSystemSettings : public UObject
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(config, EditAnywhere, meta = (AllowedClasses = "DataTable"))
+	FSoftObjectPath ConfigDataTablePath;
+};
 
 /**
  * 
  */
-UCLASS(config=ModularItemSystem, defaultconfig)
+UCLASS()
 class MODULARITEMSYSTEM_API UModularItemSubsystem final : public UEngineSubsystem
 {
 	GENERATED_BODY()
@@ -33,17 +47,14 @@ public:
 	 */
 	static UModularItemSubsystem* Get();
 
+	/**
+	 * Check if the data table row struct is FModularItemData
+	 */
+	static bool IsTableUsingModularItemData(UDataTable* _table);
+
 	//~ Begin USubsystem Interface
 	void Initialize(FSubsystemCollectionBase& _collection) override;
 	//~ End USubsystem Interface
-
-#if WITH_EDITOR
-
-public:
-
-
-#endif WITH_EDITOR
-
 
 private:
 
@@ -52,52 +63,61 @@ private:
 	 */
 	void OnAssetFilesLoaded();
 
-	/**
-	 * Load data array from the data table
-	 * @note This will only success if the "LoadedItemDataArray" is empty
-	 */
-	void LoadItemData();
-
 public:
 
 	/**
 	 * Gets the item data by its' name
-	 * @param _itemName The name of the item (Not the display name)
+	 * @param _itemName  The name of the item (Not the display name)
 	 * @return The item data
 	 */
 	UFUNCTION(BlueprintCallable, Category = "ModularItemSystem")
-	FItemData GetItemByName(const FName& _itemName) const;
+	FModularItemData GetItemByName(const FName& _itemName) const;
 
 	/**
 	 * Gets the item's attributes
-	 * @param _itemName The name of the item (Not the display name)
+	 * @param _itemName  The name of the item (Not the display name)
 	 * @return Array of attributes
 	 */
 	UFUNCTION(BlueprintCallable, Category = "ModularItemSystem")
-	TArray<UItemAttributeBase*> GetItemAttributes(FName _itemName) const;
+	TArray<UItemAttributeBase*> GetItemAttributes(const FName& _itemName) const;
 
 	/**
 	 * Gets all the items that have the attribute
-	 * @param _attributeClass The class type of the attribute
+	 * @param _attributeClass  The class type of the attribute
 	 * @return Array of items
 	 */
 	UFUNCTION(BlueprintCallable, Category = "ModularItemSystem")
-	const TArray<FItemData> FindItemsContainAttribute(TSubclassOf<class UItemAttributeBase> _attributeClass) const;
+	const TArray<FModularItemData> FindItemsContainAttribute(TSubclassOf<UItemAttributeBase> _attributeClass) const;
 
 
 private:
 
+	/** The user setting */
+	//UPROPERTY()
+	//UModularItemSystemSettings* MiSettings;
+
 	/** The item data table that will be loaded according to the reference path in runtime */
 	UPROPERTY(Transient)
-	class UDataTable* ItemDataTable;
+	UDataTable* ItemDataTable;
 
-	/** The item datas that is currently loaded, might differ with the actual data table in real-time */
-	UPROPERTY(Transient)
-	TArray<FItemData> LoadedItemDataArray;
+public:
+
+	/**
+	 * Change the data table that we are using
+	 * @param _newDataTable  The new data table
+	 */
+	void ChangeDataTable(UDataTable* _newDataTable);
 
 public:
 
 	FORCEINLINE class UDataTable* GetItemDataTable() const {
 		return ItemDataTable;
 	}
+
+	FORCEINLINE UModularItemSystemSettings* GetSettings() {
+		return Cast<UModularItemSystemSettings>(UModularItemSystemSettings::StaticClass()->GetDefaultObject());
+	}
+
+	
+
 };

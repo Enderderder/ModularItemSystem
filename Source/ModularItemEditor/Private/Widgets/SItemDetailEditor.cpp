@@ -144,6 +144,11 @@ void SItemDetailEditor::SelectItem(FName _itemName)
 	OnSelectionChanged(newSelectedName, ESelectInfo::Direct);
 }
 
+void SItemDetailEditor::ChangeDataTable(UDataTable* _newDataTable)
+{
+	ItemDataTable = _newDataTable;
+}
+
 void SItemDetailEditor::OnPropertyChangeFinished(const FPropertyChangedEvent& _propertyChangedEvent)
 {
 	FProperty* propertyChanged = _propertyChangedEvent.Property;
@@ -329,8 +334,11 @@ void SItemDetailEditor::CleanAttributeDetailViews()
 
 void SItemDetailEditor::RebuildAttributeDetailViews()
 {
+	// Ensure it is the detail views are clean
+	CleanAttributeDetailViews();
+
 	// Builds the detail views of all the attribute this item has
-	FItemData* itemData = (FItemData*)CurrentRow->GetStructMemory();
+	FModularItemData* itemData = (FModularItemData*)CurrentRow->GetStructMemory();
 	if (itemData && AttributeDetailViewsHolder.IsValid())
 	{
 		for (UItemAttributeBase* itemAttribute : itemData->ItemAttributes)

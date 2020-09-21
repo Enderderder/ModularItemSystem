@@ -6,18 +6,13 @@ public class ModularItemEditor : ModuleRules
 {
 	public ModularItemEditor(ReadOnlyTargetRules Target) : base(Target)
 	{
-		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
-
-		PublicIncludePaths.AddRange(
-			new string[] {
-			}
-			);
+        if (Target.Type != TargetType.Editor)
+        {
+            throw new BuildException("Unable to instantiate ModularItemEditor module for non-editor targets.");
+        }
 
 
-		PrivateIncludePaths.AddRange(
-			new string[] {
-			}
-			);
+        PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 
 
 		PublicDependencyModuleNames.AddRange(
@@ -42,6 +37,7 @@ public class ModularItemEditor : ModuleRules
 				"InputCore",
 				"UnrealEd",
 				"LevelEditor",
+				"PropertyEditor",
 				"CoreUObject",
 				"Engine",
 				"Slate",

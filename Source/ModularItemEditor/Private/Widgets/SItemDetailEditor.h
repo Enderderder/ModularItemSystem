@@ -42,6 +42,11 @@ public:
 	 */
 	void SelectItem(FName _itemName);
 
+	/**
+	 * Change the data table we are editing
+	 */
+	void ChangeDataTable(class UDataTable* _newDataTable);
+
 private:
 
 	bool IsChangingItemName(FProperty* _changingProperty) const;
@@ -56,6 +61,7 @@ protected:
 	TSharedPtr<class IStructureDetailsView> StructureDetailsView;
 	TSharedPtr<FName> SelectedName;
 
+	
 	void RefreshNameList();
 	void CleanBeforeChange();
 	void Restore();

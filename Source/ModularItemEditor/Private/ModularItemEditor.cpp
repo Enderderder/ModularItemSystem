@@ -69,7 +69,7 @@ TSharedRef<SDockTab> FModularItemEditorModule::OnSpawnPluginTab(const FSpawnTabA
 	itemCreator->Initialize();
 
 	return SNew(SDockTab)
-		.TabRole(ETabRole::NomadTab)
+		.TabRole(ETabRole::MajorTab)
 		[
 			itemCreator
 		];
