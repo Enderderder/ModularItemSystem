@@ -34,8 +34,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (MultiLine = true))
 	FString Description;
 
-	// 0 means infinite stack
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bInifiniteStack;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = 1, EditCondition = "!bInifiniteStack"))
 	int32 MaxStack;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
@@ -50,7 +52,7 @@ public:
 		ItemName(TEXT("")),
 		DisplayName(TEXT("")),
 		Description(TEXT("")),
-		MaxStack(0)
+		MaxStack(1)
 	{}
 };
 
