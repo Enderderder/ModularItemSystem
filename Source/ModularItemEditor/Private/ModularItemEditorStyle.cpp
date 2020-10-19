@@ -46,6 +46,7 @@ TSharedRef< FSlateStyleSet > FModularItemEditorStyle::Create()
 	Style->SetContentRoot(IPluginManager::Get().FindPlugin("ModularItemSystem")->GetBaseDir() / TEXT("Resources"));
 
 	Style->Set("ModularItemEditor.OpenPluginWindow", new IMAGE_BRUSH(TEXT("ButtonIcon_40x"), Icon40x40));
+	Style->Set("ModularItemEditor.OpenPluginWindow.Small", new IMAGE_BRUSH(TEXT("ButtonIcon_20x"), Icon20x20));
 
 	return Style;
 }
