@@ -66,6 +66,15 @@ private:
 public:
 
 	/**
+	 * Gets the item data by its' unique id
+	 * @param	_itemId  The ID of the item
+	 * @return	The item data
+	 * 
+	 * @note	This can be very slow depends on the size of the item database
+	 */
+	FModularItemData GetItemById(const FGuid& _itemId) const;
+
+	/**
 	 * Gets the item data by its' name
 	 * @param _itemName  The name of the item (Not the display name)
 	 * @return The item data

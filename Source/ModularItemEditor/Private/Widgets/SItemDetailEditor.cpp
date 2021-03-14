@@ -12,7 +12,7 @@
 #include "IDetailsView.h"
 
 
-#define LOCTEXT_NAMESPACE "SItemDetailEditor"
+#define LOCTEXT_NAMESPACE "ItemDetailEditor"
 
 class FStructFromItemDataTable : public FStructOnScope
 {
@@ -20,10 +20,9 @@ class FStructFromItemDataTable : public FStructOnScope
 	FName RowName;
 
 public:
-	FStructFromItemDataTable(UDataTable* InDataTable, FName _inRowName)
-		: FStructOnScope()
-		, DataTable(InDataTable)
-		, RowName(_inRowName)
+	FStructFromItemDataTable(UDataTable* InDataTable, FName _inRowName) : 
+		DataTable(InDataTable),
+		RowName(_inRowName)
 	{}
 
 	virtual uint8* GetStructMemory() override
@@ -70,6 +69,7 @@ public:
 	}
 };
 
+
 SItemDetailEditor::SItemDetailEditor() :
 	SCompoundWidget()
 {}
@@ -77,6 +77,8 @@ SItemDetailEditor::SItemDetailEditor() :
 SItemDetailEditor::~SItemDetailEditor()
 {}
 
+
+// FNotifyHook
 void SItemDetailEditor::NotifyPreChange(FProperty* _propertyAboutToChange)
 {
 	check(ItemDataTable.IsValid());
@@ -93,23 +95,25 @@ void SItemDetailEditor::NotifyPostChange(const FPropertyChangedEvent& _propertyC
 	ItemDataTable->MarkPackageDirty();
 }
 
-void SItemDetailEditor::PreChange(const class UUserDefinedStruct* Struct, FStructureEditorUtils::EStructureEditorChangeInfo Info)
+// INotifyOnStructChanged
+void SItemDetailEditor::PreChange(const UUserDefinedStruct* _struct, FStructureEditorUtils::EStructureEditorChangeInfo _info)
 {
-	if (Struct && (GetScriptStruct() == Struct))
+	if (_struct && (GetScriptStruct() == _struct))
 	{
 		CleanBeforeChange();
 	}
 }
 
-void SItemDetailEditor::PostChange(const class UUserDefinedStruct* Struct, FStructureEditorUtils::EStructureEditorChangeInfo Info)
+void SItemDetailEditor::PostChange(const UUserDefinedStruct* _struct, FStructureEditorUtils::EStructureEditorChangeInfo _info)
 {
-	if (Struct && (GetScriptStruct() == Struct))
+	if (_struct && (GetScriptStruct() == _struct))
 	{
 		RefreshNameList();
 		Restore();
 	}
 }
 
+// INotifyOnDataTableChanged
 void SItemDetailEditor::PreChange(const UDataTable* Changed, FDataTableEditorUtils::EDataTableChangeInfo Info)
 {
 	if ((Changed == ItemDataTable.Get()) && (FDataTableEditorUtils::EDataTableChangeInfo::RowList == Info))
@@ -126,6 +130,7 @@ void SItemDetailEditor::PostChange(const UDataTable* Changed, FDataTableEditorUt
 		Restore();
 	}
 }
+
 
 void SItemDetailEditor::SelectItem(FName _itemName)
 {
@@ -151,14 +156,13 @@ void SItemDetailEditor::ChangeDataTable(UDataTable* _newDataTable)
 
 void SItemDetailEditor::OnPropertyChangeFinished(const FPropertyChangedEvent& _propertyChangedEvent)
 {
-	FProperty* propertyChanged = _propertyChangedEvent.Property;
-
-	if (!propertyChanged) return;
+	FName propertyName = _propertyChangedEvent.GetPropertyName();
+	if (propertyName == NAME_None) return;
 
 	// Do revert if the new item name is invalid or repeated
-	if (IsChangingItemName(propertyChanged))
+	if (propertyName == TEXT("ItemName"))
 	{
-		FName newItemName = GetFNameValueFromProperty(propertyChanged, CurrentRow->GetStructMemory());
+		FName newItemName = GetFNameValueFromProperty(_propertyChangedEvent.Property, CurrentRow->GetStructMemory());
 		FName dataTableRowName = ((FStructFromItemDataTable*)CurrentRow.Get())->GetRowName();
 
 		if (newItemName != dataTableRowName)
@@ -198,7 +202,7 @@ void SItemDetailEditor::OnPropertyChangeFinished(const FPropertyChangedEvent& _p
 			// Revert the change if needed
 			if (bNeedToRevertChange)
 			{
-				FNameProperty* itemNameProperty = CastField<FNameProperty>(propertyChanged);
+				FNameProperty* itemNameProperty = CastField<FNameProperty>(_propertyChangedEvent.Property);
 				itemNameProperty->SetPropertyValue_InContainer(CurrentRow->GetStructMemory(), dataTableRowName);
 			}
 			else
@@ -215,14 +219,13 @@ void SItemDetailEditor::OnPropertyChangeFinished(const FPropertyChangedEvent& _p
 	}
 
 	// Refresh the attribute detail views if the array has changed
-	FName changedPropertyName = propertyChanged->GetFName();
-	if (changedPropertyName == TEXT("ItemAttributes"))
+	if (propertyName == TEXT("ItemAttributes"))
 	{
 		CleanAttributeDetailViews();
 		RebuildAttributeDetailViews();
 	}
 
-	// HACK: Test code for changing the name of the data asset
+	// #HACK: Test code for changing the name of the data asset
 // 	if (changedPropertyName == TEXT("ItemAttributes"))
 // 	{
 // 		if (propertyChanged->IsA(FArrayProperty::StaticClass()))
@@ -389,13 +392,13 @@ FName SItemDetailEditor::GetCurrentName() const
 	return SelectedName.IsValid() ? *SelectedName : NAME_None;
 }
 
-void SItemDetailEditor::OnSelectionChanged(TSharedPtr<FName> _inItem, ESelectInfo::Type _inSeletionInfo)
+void SItemDetailEditor::OnSelectionChanged(TSharedPtr<FName> _inItemName, ESelectInfo::Type _inSeletionInfo)
 {
-	if (_inItem.IsValid() && _inItem != SelectedName)
+	if (_inItemName.IsValid() && _inItemName != SelectedName)
 	{
 		CleanBeforeChange();
 
-		SelectedName = _inItem;
+		SelectedName = _inItemName;
 
 		Restore();
 	}

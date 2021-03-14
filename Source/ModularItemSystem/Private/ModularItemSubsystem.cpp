@@ -118,6 +118,23 @@ const TArray<FModularItemData> UModularItemSubsystem::FindItemsContainAttribute(
 	return outputData;
 }
 
+FModularItemData UModularItemSubsystem::GetItemById(const FGuid& _itemId) const
+{
+	if (ItemDataTable)
+	{
+		TArray<FModularItemData*> itemRows;
+		ItemDataTable->GetAllRows(WarningContext, itemRows);
+
+		for (const auto* item : itemRows)
+		{
+			if (item->GetItemId() == _itemId)
+				return *item;
+		}
+	}
+
+	return FModularItemData();
+}
+
 FModularItemData UModularItemSubsystem::GetItemByName(const FName& _itemName) const
 {
 	if (ItemDataTable)

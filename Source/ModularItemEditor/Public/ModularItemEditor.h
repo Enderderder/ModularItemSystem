@@ -1,4 +1,4 @@
-// Copyright 1998-2019 Epic Games, Inc. All Rights Reserved.
+// Copyright Richard Wulansari. All Rights Reserved.
 
 #pragma once
 
@@ -28,4 +28,29 @@ private:
 
 private:
 	TSharedPtr<class FUICommandList> PluginCommands;
+
+
+private:
+	void RegisterObjectCustomizations();
+
+	/**
+	 * Registers a custom class to the property editor module
+	 *
+	 * @param ClassName				The class name to register for property customization
+	 * @param DetailLayoutDelegate	The delegate to call to get the custom detail layout instance
+	 */
+	void RegisterCustomClassLayout(FName _className, FOnGetDetailCustomizationInstance _detailLayoutDelegate);
+
+	/**
+	* Registers a custom struct
+	*
+	* @param StructName				The name of the struct to register for property customization
+	* @param StructLayoutDelegate	The delegate to call to get the custom detail layout instance
+	*/
+	void RegisterCustomPropertyTypeLayout(FName _propertyTypeName, FOnGetPropertyTypeCustomizationInstance _propertyTypeLayoutDelegate);
+
+private:
+	/** List of registered class that we must unregister when the module shuts down */
+	TSet<FName> RegisteredClassNames;
+	TSet<FName> RegisteredPropertyTypes;
 };

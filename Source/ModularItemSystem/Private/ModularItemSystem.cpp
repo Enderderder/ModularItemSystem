@@ -4,7 +4,7 @@
 
 static const FName ModularItemSystemTabName("ModularItemSystem");
 
-#define LOCTEXT_NAMESPACE "FModularItemSystemModule"
+#define LOCTEXT_NAMESPACE "ModularItemSystemModule"
 
 void FModularItemSystemModule::StartupModule()
 {

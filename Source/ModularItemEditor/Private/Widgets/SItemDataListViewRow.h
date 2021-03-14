@@ -7,30 +7,36 @@
 
 #include "ModularItemTypes.h"
 
+
+class SItemDataCompactRowView;
+
 /**
  * 
  */
-class SItemDataListViewRow : public STableRow<FItemDataListViewPtr>
+class SItemDataListViewRow : public STableRow<FModularItemListViewPtr>
 {
 public:
-	SLATE_BEGIN_ARGS(SItemDataListViewRow){}
+	SLATE_BEGIN_ARGS(SItemDataListViewRow) :
+		_bUseSmallIcon(false)
+	{}
+	
 	/** The item row we're working with to allow us to get naming information. */
-	SLATE_ARGUMENT(FItemDataListViewPtr, ItemDataPtr)
+	SLATE_ARGUMENT(FModularItemListViewPtr, ModularItemPtr)
+	
+	SLATE_ARGUMENT(bool, bUseSmallIcon)
+	
 	SLATE_END_ARGS()
 
-protected:
-
-	const FSlateBrush* GetItemIconBrush();
-
+public:
+	/** Constructs this widget with InArgs */
+	void Construct(const FArguments& _inArgs, const TSharedRef<STableViewBase>& _inOwnerTableView);
 
 private:
 
-	FItemDataListViewPtr ItemDataPtr;
+	/** Item we displaying */
+	FModularItemListViewPtr ModularItemPtr;
 
-	TSharedPtr<STableRow<FItemDataListViewPtr>> ItemTableRow;
+	/** Display widget for the item row */
+	TSharedPtr<SItemDataCompactRowView> CompactItemRowView;
 
-public:
-
-	/** Constructs this widget with InArgs */
-	void Construct(const FArguments& _inArgs, const TSharedRef<STableViewBase>& _inOwnerTableView);
 };

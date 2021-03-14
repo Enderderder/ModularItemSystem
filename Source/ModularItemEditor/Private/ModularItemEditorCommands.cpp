@@ -2,7 +2,7 @@
 
 #include "ModularItemEditorCommands.h"
 
-#define LOCTEXT_NAMESPACE "FModularItemEditorModule"
+#define LOCTEXT_NAMESPACE "ModularItemEditorModule"
 
 void FModularItemEditorCommands::RegisterCommands()
 {
