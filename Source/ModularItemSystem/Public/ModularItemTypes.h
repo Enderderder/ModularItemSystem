@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Uobject/NoExportTypes.h"
+#include "UObject/Object.h"
 #include "Engine/DataTable.h"
 #include "ModularItemTypes.generated.h"
 
@@ -15,15 +15,18 @@ struct FModularItemData : public FTableRowBase
 {
 	GENERATED_BODY()
 
-public:
+protected:
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 Id;
+	// The never change id when the item is created
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	FGuid Id;
+
+public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	class UTexture2D* Icon;
 
-	// This will sync with the datatable row name, cannot be deplicated
+	// This will sync with the datatable row name, cannot be duplicated
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FName ItemName;
 
@@ -40,6 +43,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = 1, EditCondition = "!bInifiniteStack"))
 	int32 MaxStack;
 
+	// Deprecated as this is unnecessary
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TArray<TSubclassOf<class UItemAttributeBase>> ItemAttributeTypes;
 
@@ -47,27 +51,60 @@ public:
 	TArray<class UItemAttributeBase*> ItemAttributes;
 
 	FModularItemData() :
-		Id(0),
+		Id(FGuid()), // Empty id, will initialize through item creator
 		Icon(nullptr),
 		ItemName(TEXT("")),
 		DisplayName(TEXT("")),
 		Description(TEXT("")),
 		MaxStack(1)
 	{}
+
+public:
+
+	/**
+	 * Init item id if currently uninitilized
+	 */
+	void InitItemId()
+	{ 
+		if (!Id.IsValid()) Id = FGuid::NewGuid();
+	}
+
+	const FGuid GetItemId() const
+	{
+		return Id;
+	}
+
+	/**
+	 * Check if this is an valid item data set
+	 * 
+	 * If both item name and id is set then it is consider valid
+	 */
+	bool IsValid() const
+	{
+		return Id.IsValid()
+			&& ItemName != NAME_None;
+	}
 };
 
-struct FItemListViewData
+/**
+ * This is a reference to the item from the modular item database
+ */
+USTRUCT(BlueprintType)
+struct FModularItem
 {
-	/** Unique ID used to identify this row */
-	FName RowId;
+	GENERATED_BODY()
 
-	/** Insertion number of the row */
-	uint32 RowNum;
+public:
 
-	/** Struct data of the item */
-	FModularItemData ItemData;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FName ItemReferenceName;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FGuid ItemReferenceId;
+
+
+	FModularItem() :
+		ItemReferenceName(NAME_None),
+		ItemReferenceId(FGuid())
+	{}
 };
-
-
-typedef TSharedPtr<FItemListViewData> FItemDataListViewPtr;
-

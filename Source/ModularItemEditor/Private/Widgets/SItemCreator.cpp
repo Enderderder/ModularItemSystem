@@ -26,8 +26,9 @@
 #include "IStructureDetailsView.h"
 #include "ISinglePropertyView.h"
 
-#define LOCTEXT_NAMESPACE "SItemCreator"
+#define LOCTEXT_NAMESPACE "ItemCreator"
 
+// INotifyOnStructChanged
 void SItemCreator::PreChange(const class UUserDefinedStruct* _struct, FStructureEditorUtils::EStructureEditorChangeInfo _info)
 {
 }
@@ -41,6 +42,7 @@ void SItemCreator::PostChange(const class UUserDefinedStruct* _struct, FStructur
  	}
 }
 
+// INotifyOnDataTableChanged
 void SItemCreator::PreChange(const UDataTable* _changed, FDataTableEditorUtils::EDataTableChangeInfo _info)
 {
 }
@@ -68,12 +70,6 @@ void SItemCreator::SelectionChange(const UDataTable* _changed, FName _rowName)
 			CallbackOnItemHighlighted.ExecuteIfBound(HighlightedItemName);
 		}
 	}
-}
-
-void SItemCreator::Initialize()
-{
-	// TODO: Delete if not used
-
 }
 
 BEGIN_SLATE_FUNCTION_BUILD_OPTIMIZATION
@@ -126,7 +122,7 @@ void SItemCreator::Construct(const FArguments& _inArgs)
 					.OnClicked(this, &SItemCreator::OnAddItemButtonClicked)
 					[
 						SNew(STextBlock)
-						.Text(STRING_TEXT("Add Item"))
+						.Text(LOCTEXT("Additem", "Add Item"))
 						.Justification(ETextJustify::Center)
 					]
 				]
@@ -144,7 +140,7 @@ void SItemCreator::Construct(const FArguments& _inArgs)
 					.OnClicked(this, &SItemCreator::OnDeleteItemButtonClicked)
 					[
 						SNew(STextBlock)
-						.Text(STRING_TEXT("Delete"))
+						.Text(LOCTEXT("Delete", "Delete"))
 						.Justification(ETextJustify::Center)
 					]
 				]
@@ -181,10 +177,10 @@ void SItemCreator::SetHightlightItem(FName _itemName)
 	{
 		HighlightedItemName = _itemName;
 
-		FItemDataListViewPtr* newItemSelectionPtr = NULL;
+		FModularItemListViewPtr* newItemSelectionPtr = NULL;
 		for (HighlighteditemIndex = 0; HighlighteditemIndex < VisibleItems.Num(); ++HighlighteditemIndex)
 		{
-			if (VisibleItems[HighlighteditemIndex]->RowId == _itemName)
+			if (VisibleItems[HighlighteditemIndex]->RowName == _itemName)
 			{
 				newItemSelectionPtr = &(VisibleItems[HighlighteditemIndex]);
 
@@ -216,7 +212,7 @@ void SItemCreator::CreateItemDetailEditor()
 
 TSharedRef<SVerticalBox> SItemCreator::CreateItemListViewContentBox()
 {
-	ItemListView = SNew(SListView<FItemDataListViewPtr>)
+	ItemListView = SNew(SListView<FModularItemListViewPtr>)
 		.ItemHeight(24)
 		.SelectionMode(ESelectionMode::Single)
 		.ConsumeMouseWheel(EConsumeMouseWheel::Always)
@@ -248,13 +244,15 @@ UDataTable* SItemCreator::GetEditableDataTable() const
 
 void SItemCreator::OnMiSettingsChanged(const FPropertyChangedEvent& _event)
 {
-	const auto currentDataTable = GetEditableDataTable();
-	auto miSystem = UModularItemSubsystem::Get();
+	const auto	cachedDataTablePath	= GetEditableDataTable()->GetPathName();
 
-	bool bNeedToRevertChange = false;
+	auto		miSystem			= UModularItemSubsystem::Get();
 
-	auto newItemTableObject = miSystem->GetSettings()->ConfigDataTablePath.ResolveObject();
-	auto newItemTable = Cast<UDataTable>(newItemTableObject);
+	bool		bNeedToRevertChange = false;
+
+	auto		newItemTableObject	= miSystem->GetSettings()->ConfigDataTablePath.ResolveObject();
+	auto		newItemTable		= Cast<UDataTable>(newItemTableObject);
+	
 	if (!newItemTable ||
 		!UModularItemSubsystem::IsTableUsingModularItemData(newItemTable))
 	{
@@ -263,14 +261,14 @@ void SItemCreator::OnMiSettingsChanged(const FPropertyChangedEvent& _event)
 		// The item data table is invalid
 		// Popup an error dialog here
 		const FText Message = LOCTEXT(
-			"Invalid Item Data Table",
+			"InvalidItemDataTable",
 			"Cannot use this asset as an editable item data table, make sure the row struct of the table is FModularItemData");
 		FMessageDialog::Open(EAppMsgType::Ok, Message);
 	}
 
 	if (bNeedToRevertChange)
 	{
-		miSystem->GetSettings()->ConfigDataTablePath.SetPath(currentDataTable->GetPathName());
+		miSystem->GetSettings()->ConfigDataTablePath.SetPath(cachedDataTablePath);
 	}
 	else
 	{
@@ -281,52 +279,17 @@ void SItemCreator::OnMiSettingsChanged(const FPropertyChangedEvent& _event)
 	}
 }
 
-void SItemCreator::CacheItemDataTableForEdit(UDataTable* _dataTable, TArray<FItemDataListViewPtr>& _outListViewPtrArray)
-{
-	if (!_dataTable || !_dataTable->RowStruct)
-	{
-		_outListViewPtrArray.Empty();
-		return;
-	}
-
-	TArray<FItemDataListViewPtr> oldDataRows = _outListViewPtrArray;
-
-	// Populate the data array
-	_outListViewPtrArray.Reset(_dataTable->GetRowMap().Num());
-	int32 index = 0;
-	for (auto rowIt = _dataTable->GetRowMap().CreateConstIterator(); rowIt; ++rowIt, ++index)
-	{
-		FItemDataListViewPtr cachedRowData;
-
-		// Trys to reuse old data if possible
-		if (index >= oldDataRows.Num() || oldDataRows[index]->RowId != rowIt->Key)
-		{
-			cachedRowData = MakeShareable(new FItemListViewData());
-			cachedRowData->RowId = rowIt->Key;
-		}
-		else
-		{
-			cachedRowData = oldDataRows[index];
-		}
-
-		// Always refresh the item data value
-		cachedRowData->ItemData = *(reinterpret_cast<FModularItemData*>(rowIt->Value));
-
-		_outListViewPtrArray.Add(cachedRowData);
-	}
-}
-
-TSharedRef<ITableRow> SItemCreator::OnItemRowGenerated(FItemDataListViewPtr _item, const TSharedRef<class STableViewBase>& _ownerTable) const
+TSharedRef<ITableRow> SItemCreator::OnItemRowGenerated(FModularItemListViewPtr _item, const TSharedRef<class STableViewBase>& _ownerTable) const
 {
 	return
 		SNew(SItemDataListViewRow, _ownerTable)
-		.ItemDataPtr(_item);
+		.ModularItemPtr(_item);
 }
 
-void SItemCreator::OnItemSelectionChanged(FItemDataListViewPtr _newInSelection, ESelectInfo::Type _selectInfo)
+void SItemCreator::OnItemSelectionChanged(FModularItemListViewPtr _newInSelection, ESelectInfo::Type _selectInfo)
 {
-	const bool bSelectionChanged = !_newInSelection.IsValid() || _newInSelection->RowId != HighlightedItemName;
-	const FName NewRowName = (_newInSelection.IsValid()) ? _newInSelection->RowId : NAME_None;
+	const bool bSelectionChanged = !_newInSelection.IsValid() || _newInSelection->RowName != HighlightedItemName;
+	const FName NewRowName = (_newInSelection.IsValid()) ? _newInSelection->RowName : NAME_None;
 
 	SetHightlightItem(NewRowName);
 
@@ -358,74 +321,17 @@ void SItemCreator::OnFilterTextCommitted(const FText& _newText, ETextCommit::Typ
 
 void SItemCreator::RefreshCachedItemDataTable(const FName _cachedSelection /*= NAME_None*/, const bool _bUpdateEvenIfValid /*= false*/)
 {
-	UDataTable* dataTable = GetEditableDataTable();
-
-	CacheItemDataTableForEdit(dataTable, AvaliableItems);
+	FModularItemEditorUtils::CacheItemDataTable(AvaliableItems);
 
 	UpdateVisibleItems(_cachedSelection, _bUpdateEvenIfValid);
 }
 
 void SItemCreator::UpdateVisibleItems(const FName _cachedSelection /*= NAME_None*/, const bool _bUpdateEvenIfValid /*= false*/)
 {
-	if (ActiveFilterText.IsEmptyOrWhitespace())
-	{
-		VisibleItems = AvaliableItems;
-	}
-	else
-	{
-		VisibleItems.Empty(AvaliableItems.Num());
+	FModularItemEditorUtils::ModularItemFilterPass(ActiveFilterText, AvaliableItems, VisibleItems);
 
-		const FString& activeFilterString = ActiveFilterText.ToString();
-		for (const FItemDataListViewPtr& itemData : AvaliableItems)
-		{
-			bool bPassesFilter = false;
-
-			// Filter for item name
-			if (itemData->RowId.ToString().Contains(activeFilterString))
-			{
-				bPassesFilter = true;
-			}
-			// Filter for item display name
-			else if (itemData->ItemData.DisplayName.Contains(activeFilterString))
-			{
-				bPassesFilter = true;
-			}
-			// Filter for item attribute names
-			else
-			{
-				for (auto attribute : itemData->ItemData.ItemAttributes)
-				{
-					if (attribute)
-					{
-						// Filter for attribute name
-						const FName attributeName = attribute->GetFName();
-						if (attributeName.ToString().Contains(activeFilterString))
-						{
-							bPassesFilter = true;
-						}
-						// Filter for attribute tag
-						else
-						{
-							for (auto tag : attribute->AttributeTags)
-							{
-								if (tag.ToString().Contains(activeFilterString))
-								{
-									bPassesFilter = true;
-								}
-							}
-						}
-					}
-				}
-			}
-
-			if (bPassesFilter)
-			{
-				VisibleItems.Add(itemData);
-			}
-		}
-	}
-
-	ItemListView->RequestListRefresh();
+	ItemListView->RebuildList();
+	//ItemListView->RequestListRefresh();
 	RestoreCachedSelection(_cachedSelection, _bUpdateEvenIfValid);
 }
 
@@ -435,16 +341,16 @@ void SItemCreator::RestoreCachedSelection(const FName _cachedSelection, const bo
 	bool bSelectedRowIsValid = false;
 	if (!_cachedSelection.IsNone())
 	{
-		bSelectedRowIsValid = VisibleItems.ContainsByPredicate([&_cachedSelection](const FItemDataListViewPtr& RowData) -> bool
+		bSelectedRowIsValid = VisibleItems.ContainsByPredicate([&_cachedSelection](const FModularItemListViewPtr& RowData) -> bool
 			{
-				return RowData->RowId == _cachedSelection;
+				return RowData->RowName == _cachedSelection;
 			});
 	}
 
 	// Apply the new selection (if required)
 	if (!bSelectedRowIsValid)
 	{
-		SetHightlightItem((VisibleItems.Num() > 0) ? VisibleItems[0]->RowId : NAME_None);
+		SetHightlightItem((VisibleItems.Num() > 0) ? VisibleItems[0]->RowName : NAME_None);
 		CallbackOnItemHighlighted.ExecuteIfBound(HighlightedItemName);
 	}
 	else if (_bUpdateEvenIfValid)
@@ -472,6 +378,7 @@ void SItemCreator::CreateNewItem()
 
 			FModularItemData* newItem = (FModularItemData*)newRow;
 			newItem->ItemName = newItemName;
+			newItem->InitItemId();
 		}
 	}
 }
@@ -481,9 +388,9 @@ void SItemCreator::RemoveSelectedItem()
 	if (UDataTable* dataTable = GetEditableDataTable())
 	{
 		// We must perform this before removing the row
-		const int32 itemToRemoveIdex = VisibleItems.IndexOfByPredicate([&](const FItemDataListViewPtr& _inItemName) -> bool
+		const int32 itemToRemoveIdex = VisibleItems.IndexOfByPredicate([&](const FModularItemListViewPtr& _inItemName) -> bool
 			{
-				return _inItemName->RowId == HighlightedItemName;
+				return _inItemName->RowName == HighlightedItemName;
 			});
 
 		// Remove row
@@ -493,7 +400,7 @@ void SItemCreator::RemoveSelectedItem()
 			const int32 RowIndexToSelect = FMath::Clamp(itemToRemoveIdex, 0, VisibleItems.Num() - 1);
 			if (VisibleItems.IsValidIndex(RowIndexToSelect))
 			{
-				FDataTableEditorUtils::SelectRow(dataTable, VisibleItems[RowIndexToSelect]->RowId);
+				FDataTableEditorUtils::SelectRow(dataTable, VisibleItems[RowIndexToSelect]->RowName);
 			}
 			// Refresh list. Otherwise, the removed row would still appear in the screen until the next list refresh. An
 			// analog of CellsListView->RequestListRefresh() also occurs inside FDataTableEditorUtils::SelectRow

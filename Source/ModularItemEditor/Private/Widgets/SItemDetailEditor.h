@@ -18,19 +18,21 @@ class SItemDetailEditor : public SCompoundWidget
 	, public FDataTableEditorUtils::INotifyOnDataTableChanged
 {
 public:
-	SLATE_BEGIN_ARGS(SItemDetailEditor){}
+	SLATE_BEGIN_ARGS(SItemDetailEditor)
+	{}
+
 	SLATE_END_ARGS()
 
 	SItemDetailEditor();
 	virtual ~SItemDetailEditor();
 
 	// FNotifyHook
-	virtual void NotifyPreChange(FProperty* PropertyAboutToChange) override;
-	virtual void NotifyPostChange(const FPropertyChangedEvent& PropertyChangedEvent, FProperty* PropertyThatChanged) override;
+	virtual void NotifyPreChange(FProperty* _propertyAboutToChange) override;
+	virtual void NotifyPostChange(const FPropertyChangedEvent& _propertyChangedEvent, FProperty* _propertyThatChanged) override;
 
 	// INotifyOnStructChanged
-	virtual void PreChange(const class UUserDefinedStruct* Struct, FStructureEditorUtils::EStructureEditorChangeInfo Info) override;
-	virtual void PostChange(const class UUserDefinedStruct* Struct, FStructureEditorUtils::EStructureEditorChangeInfo Info) override;
+	virtual void PreChange(const class UUserDefinedStruct* _struct, FStructureEditorUtils::EStructureEditorChangeInfo _info) override;
+	virtual void PostChange(const class UUserDefinedStruct* _struct, FStructureEditorUtils::EStructureEditorChangeInfo _info) override;
 
 	// INotifyOnDataTableChanged
 	virtual void PreChange(const UDataTable* Changed, FDataTableEditorUtils::EDataTableChangeInfo Info) override;
@@ -61,7 +63,6 @@ protected:
 	TSharedPtr<class IStructureDetailsView> StructureDetailsView;
 	TSharedPtr<FName> SelectedName;
 
-	
 	void RefreshNameList();
 	void CleanBeforeChange();
 	void Restore();
@@ -71,7 +72,7 @@ protected:
 	UScriptStruct* GetScriptStruct() const;
 	FName GetCurrentName() const;
 
-	virtual void OnSelectionChanged(TSharedPtr<FName> _inItem, ESelectInfo::Type _inSeletionInfo);
+	virtual void OnSelectionChanged(TSharedPtr<FName> _inItemName, ESelectInfo::Type _inSeletionInfo);
 	void OnPropertyChangeFinished(const FPropertyChangedEvent& _propertyChangedEvent);
 
 private:

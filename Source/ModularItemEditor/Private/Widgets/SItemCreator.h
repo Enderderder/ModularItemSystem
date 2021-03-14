@@ -8,13 +8,14 @@
 #include "Misc/NotifyHook.h"
 #include "Kismet2/StructureEditorUtils.h"
 #include "DataTableEditorUtils.h"
+#include "ModularItemDataTableUtils.h"
 
 #include "ModularItemTypes.h"
 
-// Define string to text macro
-#define STRING_TEXT(Content) FText::FromString(##Content)
-
 DECLARE_DELEGATE_OneParam(FOnItemHighlighted, FName /*Item name*/);
+
+class SItemDetailEditor;
+
 
 /**
  * A widget for item creation
@@ -38,11 +39,6 @@ public:
 	virtual void PostChange(const UDataTable* Changed, FDataTableEditorUtils::EDataTableChangeInfo Info) override;
 	virtual void SelectionChange(const UDataTable* Changed, FName RowName) override;
 	//~ End INotifyOnDataTableChanged interface
-
-	/**
-	 * Initialize function, called by module tab spawner
-	 */
-	void Initialize();
 
 	/** Constructs this widget with InArgs */
 	void Construct(const FArguments& _inArgs);
@@ -79,28 +75,27 @@ protected:
 	FOnItemHighlighted CallbackOnItemHighlighted;
 
 	/** The list view widget for the items */
-	TSharedPtr<class SListView<FItemDataListViewPtr>> ItemListView;
-
-	/** The items that are displaying on the item list */
-	TArray<FItemDataListViewPtr> VisibleItems;
+	TSharedPtr<SListView<FModularItemListViewPtr>> ItemListView;
 
 	/** The items that are avaliable from the data table */
-	TArray<FItemDataListViewPtr> AvaliableItems;
+	TArray<FModularItemListViewPtr> AvaliableItems;
+	/** The items that are displaying on the item list */
+	TArray<FModularItemListViewPtr> VisibleItems;
 
 	/** Item thats being highlighted/selected */
 	FName HighlightedItemName;
 	int32 HighlighteditemIndex;
 
 	/** The UI of the item list view search box */
-	TSharedPtr<class SSearchBox> ItemSearchBox;
+	TSharedPtr<SSearchBox> ItemSearchBox;
 
 	/** The fitler text for the item search box */
 	FText ActiveFilterText;
 
 
-	TSharedPtr<class SItemDetailEditor> ItemDetailEditor;
+	TSharedPtr<SItemDetailEditor> ItemDetailEditor;
 
-	TSharedPtr<class SHorizontalBox> PreviewEditBtnHodler;
+	TSharedPtr<SHorizontalBox> PreviewEditBtnHodler;
 
 protected:
 
@@ -108,11 +103,6 @@ protected:
 	 * 
 	 */
 	void OnMiSettingsChanged(const FPropertyChangedEvent& _event);
-
-	/**
-	 * 
-	 */
-	void CacheItemDataTableForEdit(UDataTable* _dataTable, TArray<FItemDataListViewPtr>& _outListViewPtrArray);
 
 	/**
 	 * Refresh the cached item data table
@@ -135,14 +125,14 @@ protected:
 	 * @param _ownerTable The owner widget
 	 * @return A shared reference of the table row
 	 */
-	TSharedRef<class ITableRow> OnItemRowGenerated(FItemDataListViewPtr _item, const TSharedRef<class STableViewBase>& _ownerTable) const;
+	TSharedRef<class ITableRow> OnItemRowGenerated(FModularItemListViewPtr _item, const TSharedRef<class STableViewBase>& _ownerTable) const;
 
 	/**
 	 * Called when the selection changed with in the list view
 	 * @param _item The item pointer that gets selected
 	 * @param _selectInfo Selection info
 	 */
-	void OnItemSelectionChanged(FItemDataListViewPtr _item, ESelectInfo::Type _selectInfo);
+	void OnItemSelectionChanged(FModularItemListViewPtr _item, ESelectInfo::Type _selectInfo);
 
 	/**
 	 * @return The filter text for the search box
@@ -169,6 +159,10 @@ protected:
 	 */
 	void RemoveSelectedItem();
 
+	/**
+	 * Callback for when item detail has been modified
+	 */
+	void OnItemDetailChanged(const FPropertyChangedEvent& _propertyChangedEvent);
 
 #pragma region Button Binding
 
